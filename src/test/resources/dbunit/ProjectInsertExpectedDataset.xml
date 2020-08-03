@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dataset>
+    <projects name="Тестовый проект" description="Прикольный проект, очень интересный, инновационный такой" biz_unit="Розничный блок"/>
+    <project_teams name="Упыри 2"/>
+</dataset>
