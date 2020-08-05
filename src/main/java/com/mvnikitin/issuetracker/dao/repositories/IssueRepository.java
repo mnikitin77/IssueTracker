@@ -8,6 +8,7 @@ import com.mvnikitin.issuetracker.issue.Issue;
 
 import java.sql.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -50,31 +51,14 @@ public class IssueRepository<T, ID> extends BaseRepository<T, ID> {
             "DELETE FROM issues WHERE id = ?";
 
 
-    private final static String GET_SPRINT_NAME =
-            "SELECT name FROM sprints WHERE id = ?";
-
-    private final static String GET_CHILDREN_IDS =
-            "SELECT id FROM issues WHERE parent_id = ?";
-
-    private final static String GET_SPRINT_ISSUES =
-            "SELECT id, issue_type_id, project_id, issue_state_id, " +
-            "issue_priority_id, sprint_id, parent_id, " +
-            "assignee_id, reporter_id, code, story_points, " +
-            "title, description, created, modified "+
-                    "FROM issues WHERE project_id = ? AND sprint_id = ?";
-
-    private final static String GET_BACKLOG_ISSUES =
+    private final static String GET_PROJECT_ISSUES =
             "SELECT id, issue_type_id, project_id, issue_state_id, " +
                     "issue_priority_id, sprint_id, parent_id, " +
                     "assignee_id, reporter_id, code, story_points, " +
                     "title, description, created, modified "+
-                    "FROM issues WHERE project_id = ? AND sprint_id IS NULL";
+                    "FROM issues WHERE project_id = ?";
 
-
-    private PreparedStatement getSprintNameStmt;
-    private PreparedStatement getChildrenIdsStmt;
-    private PreparedStatement getSprintIssuesStmt;
-    private PreparedStatement getBacklogIssuesStmt;
+    private PreparedStatement findAllByProjectStmt;
 
     public IssueRepository(ServerContext ctx) {
         super(ctx);
@@ -88,10 +72,7 @@ public class IssueRepository<T, ID> extends BaseRepository<T, ID> {
             existsStmt = con.prepareStatement(EXISTS_BY_ID);
             deleteStmt = con.prepareStatement(DELETE_USER);
 
-            getSprintNameStmt = con.prepareStatement(GET_SPRINT_NAME);
-            getChildrenIdsStmt = con.prepareStatement(GET_CHILDREN_IDS);
-            getSprintIssuesStmt = con.prepareStatement(GET_SPRINT_ISSUES);
-            getBacklogIssuesStmt = con.prepareStatement(GET_BACKLOG_ISSUES);
+            findAllByProjectStmt = con.prepareStatement(GET_PROJECT_ISSUES);
 
         } catch (SQLException throwables) {
             throwables.printStackTrace();
@@ -127,7 +108,6 @@ public class IssueRepository<T, ID> extends BaseRepository<T, ID> {
                     LocalDateTime modified = LocalDateTime.now();
                     issue.setModified(modified);
                     updateStmt.setTimestamp(13, Timestamp.valueOf(modified));
-
                     updateStmt.setInt(14, issue.getId());
 
                     updateStmt.executeUpdate();
@@ -148,7 +128,6 @@ public class IssueRepository<T, ID> extends BaseRepository<T, ID> {
         }
 
         Issue issue = null;
-        Project project = null;
 
         try {
             findByIdStmt.setInt(1, (int)primaryKey);
@@ -156,52 +135,10 @@ public class IssueRepository<T, ID> extends BaseRepository<T, ID> {
             try (ResultSet rs = findByIdStmt.executeQuery()) {
                 while (rs.next()) {
 
-                    project = ctx.getProject(rs.getString(3));
-
+                    Project project = ctx.getProject(rs.getString(3));
                     issue = makeIssueFromRS(rs, project);
-
-                    int sprintId = rs.getInt(6);
-
-                    // Если issue связана со спринтом, добавляем в спринт,
-                    // иначе - в бэклог
-                    if (sprintId != 0) {
-                        getSprintNameStmt.setInt(1, sprintId);
-
-                        try (ResultSet sprintRS = getSprintNameStmt.executeQuery()) {
-                            while (sprintRS.next()) {
-
-                                IssueContainer ic = project.getSprint(
-                                        sprintRS.getString(1));
-
-                                if (ic != null) {
-                                    ic.add(issue);
-                                    issue.setLocatedIn(ic);
-                                    break;
-                                }
-                            }
-                        }
-                    } else {
-                        project.getBacklog().add(issue);
-                        issue.setLocatedIn(project.getBacklog());
-                    }
-
-                    int parentId = rs.getInt(7);
-
-                    // Проверяем Parent (ищем в памяти и в базе)
-                    if (parentId != 0) {
-                        issue.linkParent(project.getIssueById(parentId, true), true);
-                    }
+                    project.placeAndlinkIssue(issue);
                 }
-            }
-
-            // Загружаем дочерние Issues (при привязывании
-            //        дочерних к ним будет привязана родительская)
-            getChildrenIdsStmt.setInt(1, issue.getId());
-
-            try (ResultSet childrenRS =
-                         getChildrenIdsStmt.executeQuery()) {
-
-                linkChildrenIssues(childrenRS, issue, project);
             }
 
         } catch (SQLException throwables) {
@@ -237,80 +174,34 @@ public class IssueRepository<T, ID> extends BaseRepository<T, ID> {
         super.close();
 
         try {
-            if (getSprintNameStmt != null) {
-                getSprintNameStmt.close();
-            }
-            if (getChildrenIdsStmt != null) {
-                getChildrenIdsStmt.close();
-            }
-            if (getSprintIssuesStmt != null) {
-                getSprintIssuesStmt.close();
-            }
-            if (getBacklogIssuesStmt != null) {
-                getBacklogIssuesStmt.close();
+            if (findAllByProjectStmt != null) {
+                findAllByProjectStmt.close();
             }
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
     }
 
-    public void loadIssueContainer(Project project, IssueContainer sprint) {
+    public Iterable<T> findAllByProject(Project project) {
 
-        // Очищаем содержимое контейнера
-        if (sprint != null) {
-            sprint.removeAll();
-        } else {
-            project.getBacklog().removeAll();
-        }
+        List<Issue> list = null;
 
-        // Загружаем
-        try {
-            int sprintId = (sprint == null) ? 0 : ((Sprint)sprint).getId();
+        try{
+            findAllByProjectStmt.setInt(1, project.getId());
 
-            if (sprintId == 0) {
-                getBacklogIssuesStmt.setInt(1, project.getId());
-                loadContainer(project, getBacklogIssuesStmt, null);
-            } else {
-                getSprintIssuesStmt.setInt(1, project.getId());
-                getSprintIssuesStmt.setInt(2, sprintId);
-                loadContainer(project, getSprintIssuesStmt, (Sprint) sprint);
-            }
+            try (ResultSet rs = findAllByProjectStmt.executeQuery()) {
 
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
-        }
-    }
+                list = new ArrayList<>();
 
-    private void loadContainer(Project project, PreparedStatement ps, Sprint sprint) throws SQLException {
-
-        try (ResultSet rs = ps.executeQuery()) {
-
-            while(rs.next()) {
-
-                Issue issue = makeIssueFromRS(rs, project);
-
-                // Добавляем в спринт или в бэклог
-                if (sprint != null) {
-                    sprint.add(issue);
-                    issue.setLocatedIn(sprint);
-                } else {
-                    project.getBacklog().add(issue);
-                    issue.setLocatedIn(project.getBacklog());
+                while (rs.next()) {
+                    list.add(makeIssueFromRS(rs, project));
                 }
             }
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
         }
 
-        // Загружаем и привязываем дочерние Issues (при привязывании
-        // дочерних к ним будет привязана родительская)
-        List<Issue> issues = project.getBacklog().getAllIssues();
-
-        for (Issue i: issues) {
-            getChildrenIdsStmt.setInt(1, i.getId());
-            try (ResultSet childrenRS =
-                             getChildrenIdsStmt.executeQuery()) {
-                linkChildrenIssues(childrenRS, i, project);
-            }
-        }
+        return (Iterable<T>) list;
     }
 
     private Issue makeIssueFromRS(ResultSet rs, Project project) throws SQLException {
@@ -325,6 +216,8 @@ public class IssueRepository<T, ID> extends BaseRepository<T, ID> {
                 .getNameById(rs.getInt(4)));
         issue.setPriority(ctx.getDictionary("issue_priorities")
                 .getNameById(rs.getInt(5)));
+        issue.setSprintId(rs.getInt(6));
+        issue.setParentId(rs.getInt(7));
         issue.setAssignee(project.getTeam().getUserById(rs.getInt(8)));
         issue.setReporter(project.getTeam().getUserById(rs.getInt(9)));
         issue.setCode(rs.getString(10));
@@ -377,16 +270,5 @@ public class IssueRepository<T, ID> extends BaseRepository<T, ID> {
         ps.setInt(10, issue.getStoryPoints());
         ps.setString(11, issue.getTitle());
         ps.setString(12, issue.getDescription());
-    }
-
-    private void linkChildrenIssues(ResultSet rs, Issue issue, Project project) throws SQLException {
-
-        while (rs.next()) {
-            // TODO проверять на возможное рекурсивное зацикливание
-            Issue child = project.getIssueById(rs.getInt(1), true);
-            if (child != null) {
-                issue.linkChild(child, true);
-            }
-        }
     }
 }

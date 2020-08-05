@@ -29,9 +29,12 @@ public abstract class Issue implements Linkable, Decomposable {
     protected User reporter;
 
     protected IssueContainer locatedIn;
+    protected int sprintId;
+
     protected int storyPoints;
 
     protected Issue parent;
+    protected int parentId;
     protected Map<Integer, Issue> children;
 
 
@@ -105,6 +108,14 @@ public abstract class Issue implements Linkable, Decomposable {
         return parent;
     }
 
+    public int getParentId() {
+        return parentId;
+    }
+
+    public void setParentId(int parentId) {
+        this.parentId = parentId;
+    }
+
     public List<Issue> getChildren() {
         return children.values().stream().collect(Collectors.toList());
     }
@@ -125,6 +136,14 @@ public abstract class Issue implements Linkable, Decomposable {
 
     public void setLocatedIn(IssueContainer locatedIn) {
         this.locatedIn = locatedIn;
+    }
+
+    public int getSprintId() {
+        return sprintId;
+    }
+
+    public void setSprintId(int sprintId) {
+        this.sprintId = sprintId;
     }
 
     public int getId() {

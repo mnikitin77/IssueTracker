@@ -1,6 +1,7 @@
 package com.mvnikitin.issuetracker;
 
 import com.mvnikitin.issuetracker.backlog.IssueContainer;
+import com.mvnikitin.issuetracker.backlog.Sprint;
 import com.mvnikitin.issuetracker.configuration.ServerContext;
 import com.mvnikitin.issuetracker.dao.repositories.BaseRepository;
 import com.mvnikitin.issuetracker.dao.repositories.IssueRepository;
@@ -26,8 +27,12 @@ public class Project {
     private User owner;
     private User admin;
 
+    // All project issues
+    private Map<Integer, Issue> issueBag = new HashMap<>();
+    // Backlog
     private IssueContainer backlog;
-    private Map<String, IssueContainer> sprints = new HashMap<>();
+    // Sprints
+    private Map<Integer, IssueContainer> sprints = new HashMap<>();
 
     private BaseRepository issuesRepo;
     private BaseRepository sprintsRepo;
@@ -39,20 +44,38 @@ public class Project {
         sprintsRepo = ctx.getRepository("sprint");
     }
 
-    // Загрузить информацию об issues из базы, наполнить и спринты
-    public void reloadContent() {
+    // Очистить конейнеры, загрузить issues из базы,
+    // связать и добавить в контейнеры
+    public void reloadIssues() {
 
-        // загружаем Issues в бэклог
-        reloadContainer(null);
+        resetContainers();
 
-        // загружаем Issues в спринты
-        for (IssueContainer s: sprints.values()) {
-            reloadContainer(s);
+        List<Issue> issues = (List<Issue>)((IssueRepository)issuesRepo)
+                .findAllByProject(this);
+
+        for (Issue i: issues) {
+            placeAndlinkIssue(i);
         }
     }
 
-    public void reloadContainer(IssueContainer sprint) {
-        ((IssueRepository)issuesRepo).loadIssueContainer(this, sprint);
+    public void placeAndlinkIssue(Issue i) {
+        // 1. Put all project's issues into the "issue bag".
+        issueBag.put(i.getId(), i);
+
+        // 2. Make parent-child links (searching in the memory only).
+        if (i.getParentId() > 0) {
+            i.linkParent(issueBag.get(i.getParentId()) , true);
+        }
+
+        // 3. Add the issue to the container
+        if (i.getSprintId() == 0) {
+            backlog.add(i);
+        } else {
+            IssueContainer sprint = sprints.get(i.getSprintId());
+            if (sprint != null) {
+                sprint.add(i);
+            }
+        }
     }
 
     //--------------           Team           -------------------------
@@ -73,6 +96,8 @@ public class Project {
 
         // Сохраняем в базе, получаем ID и добавляем в бэклог
         issue = (Issue)issuesRepo.save(issue);
+
+        issueBag.put(issue.getId(), issue);
         backlog.add(issue);
 
         return issue;
@@ -82,14 +107,8 @@ public class Project {
 
         Issue retval;
 
-        if ((retval = backlog.getIssueById(id)) != null) {
+        if ((retval = issueBag.get(id)) != null) {
             return retval;
-        } else {
-            for (IssueContainer ic: sprints.values()) {
-                if ((retval = ic.getIssueById(id)) != null) {
-                    return retval;
-                }
-            }
         }
 
         if (isloadFromDB) {
@@ -101,13 +120,13 @@ public class Project {
 
     public void removeIssue(Issue issue) {
 
-        if (!backlog.remove(issue)) {
-            for (IssueContainer ic: sprints.values()) {
-                if (ic.remove(issue)) {
-                    break;
-                }
-            }
+        if (issue.getSprintId() == 0) {
+            backlog.remove(issue);
+        } else {
+            sprints.get(issue.getSprintId()).remove(issue);
         }
+
+        issueBag.remove(issue.getId());
 
         issuesRepo.delete(issue);
     }
@@ -119,29 +138,42 @@ public class Project {
     //--------------          Sprints           -----------------------
     //
     public IssueContainer createSprint(LocalDate from, LocalDate to, int capacity) {
-        IssueContainer sprint = ctx.getFactory().createSprint(from, to, capacity, this);
-        sprints.put(sprint.getName(), sprint);
+
+        IssueContainer sprint = ctx.getFactory()
+                .createSprint(from, to, capacity, this);
+        addSprint(sprint);
         return sprint;
     }
 
-    public IssueContainer getSprint(String name) {
-        return sprints.get(name);
+    public IssueContainer getSprint(int id) {
+        return sprints.get(id);
+    }
+
+    public List<IssueContainer> getAllSprints() {
+        return sprints.values().stream().collect(Collectors.toList());
     }
 
     public void addSprint(IssueContainer sprint) {
         if (sprint != null) {
-            sprints.put(sprint.getName(), sprint);
+            sprints.put(((Sprint)sprint).getId(), sprint);
         }
     }
 
-    public void removeSprint(String name) {
-        IssueContainer sprint = sprints.get(name);
-        sprints.remove(name);
-        sprintsRepo.delete(sprint);
+    public void removeSprint(Integer id) {
+        sprints.remove(id);
+        IssueContainer sprint = sprints.get(id);
+
+        if (sprint != null) {
+            sprintsRepo.delete(sprint);
+        }
     }
 
     public void saveSprint(String name) {
-        sprintsRepo.save(sprints.get(name));
+        IssueContainer sprint = sprints.get(id);
+
+        if (sprint != null) {
+            sprintsRepo.save(sprint);
+        }
     }
 
     //-----
@@ -213,5 +245,17 @@ public class Project {
     @Override
     public String toString() {
         return name;
+    }
+
+
+    //---------------------------
+
+    private void resetContainers() {
+        backlog.removeAll();
+        for (IssueContainer s: sprints.values()) {
+            s.removeAll();
+        }
+
+        issueBag.clear();
     }
 }
