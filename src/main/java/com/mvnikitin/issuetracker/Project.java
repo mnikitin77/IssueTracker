@@ -2,24 +2,30 @@ package com.mvnikitin.issuetracker;
 
 import com.mvnikitin.issuetracker.backlog.IssueContainer;
 import com.mvnikitin.issuetracker.backlog.Sprint;
-import com.mvnikitin.issuetracker.configuration.ServerContext;
-import com.mvnikitin.issuetracker.dao.repositories.BaseRepository;
 import com.mvnikitin.issuetracker.dao.repositories.IssueRepository;
+import com.mvnikitin.issuetracker.dao.repositories.IssueTrackerRepository;
+import com.mvnikitin.issuetracker.factory.IssueTrackingFactory;
 import com.mvnikitin.issuetracker.issue.Issue;
 import com.mvnikitin.issuetracker.user.Team;
 import com.mvnikitin.issuetracker.user.User;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Component("project")
+@Scope("prototype")
 public class Project {
 
     private int id;
     private Team team;
-    private ServerContext ctx;
 
     private String name;
     private String description;
@@ -34,18 +40,35 @@ public class Project {
     // Sprints
     private Map<Integer, IssueContainer> sprints = new HashMap<>();
 
-    private BaseRepository issuesRepo;
-    private BaseRepository sprintsRepo;
+    private IssueTrackerRepository issuesRepo;
+    private IssueTrackerRepository sprintsRepo;
 
-    public Project(ServerContext ctx) {
-        this.ctx = ctx;
-        backlog = ctx.getFactory().createBacklog();
-        issuesRepo = ctx.getRepository("issue");
-        sprintsRepo = ctx.getRepository("sprint");
+    private IssueTrackingFactory factory;
+
+    @PostConstruct
+    private void init() {
+        backlog = factory.createBacklog();
+    }
+
+    @Autowired
+    @Qualifier("issue_repo")
+    public void setIssuesRepo(IssueTrackerRepository issuesRepo) {
+        this.issuesRepo = issuesRepo;
+    }
+
+    @Autowired
+    @Qualifier("sprint_repo")
+    public void setSprintsRepo(IssueTrackerRepository sprintsRepo) {
+        this.sprintsRepo = sprintsRepo;
+    }
+
+    @Autowired
+    public void setFactory(IssueTrackingFactory factory) {
+        this.factory = factory;
     }
 
     // Очистить конейнеры, загрузить issues из базы,
-    // связать и добавить в контейнеры
+    // связать между собой и добавить в контейнеры
     public void reloadIssues() {
 
         resetContainers();
@@ -92,7 +115,7 @@ public class Project {
     //
     public Issue createIssue(String type) {
 
-        Issue issue = ctx.getFactory().createIssue(type, this);
+        Issue issue = factory.createIssue(type, this);
 
         // Сохраняем в базе, получаем ID и добавляем в бэклог
         issue = (Issue)issuesRepo.save(issue);
@@ -139,8 +162,7 @@ public class Project {
     //
     public IssueContainer createSprint(LocalDate from, LocalDate to, int capacity) {
 
-        IssueContainer sprint = ctx.getFactory()
-                .createSprint(from, to, capacity, this);
+        IssueContainer sprint = factory.createSprint(from, to, capacity, this);
         addSprint(sprint);
         return sprint;
     }
@@ -238,8 +260,8 @@ public class Project {
         return sprints.values().stream().collect(Collectors.toList());
     }
 
-    public ServerContext getContext() {
-        return ctx;
+    public IssueTrackingFactory getFactory() {
+        return factory;
     }
 
     @Override

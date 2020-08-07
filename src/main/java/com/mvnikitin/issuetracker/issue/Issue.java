@@ -70,7 +70,6 @@ public abstract class Issue implements Linkable, Decomposable {
     public void unlinkChild(Issue child, boolean unlinkParent) {
 
         if (child != null && children != null &&
-//                children.remove(child)) {
                 children.remove(child.getId()) != null) {
 
             if (children.isEmpty()) {

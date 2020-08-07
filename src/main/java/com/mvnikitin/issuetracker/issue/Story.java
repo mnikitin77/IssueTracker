@@ -24,7 +24,7 @@ public class Story extends Issue {
     @Override
     public Issue createChild() {
 
-        Issue child = project.getContext().getFactory().createIssue("Task", project);
+        Issue child = project.getFactory().createIssue("Task", project);
 
         // Добавляем дочерний элемент в бэклог
         // (альтернативный вариант: locatedIn.add(child);)

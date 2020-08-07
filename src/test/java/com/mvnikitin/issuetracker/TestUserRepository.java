@@ -1,13 +1,18 @@
 package com.mvnikitin.issuetracker;
 
-import com.mvnikitin.issuetracker.configuration.ServerContext;
+import com.mvnikitin.issuetracker.configuration.AppConfig;
+import com.mvnikitin.issuetracker.configuration.DBConnection;
+import com.mvnikitin.issuetracker.dao.repositories.IssueTrackerRepository;
 import com.mvnikitin.issuetracker.user.User;
-import com.mvnikitin.issuetracker.dao.repositories.BaseRepository;
-import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringRunner;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -18,17 +23,23 @@ import java.util.Optional;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+@RunWith(SpringRunner.class)
+@ContextConfiguration(classes = AppConfig.class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class TestUserRepository {
 
-    private static ServerContext ctx = null;
-
     private static User user = new User();
+
+    @Autowired
+    private DBConnection connMngr;
+
+    @Autowired
+    @Qualifier("user_repo")
+    private IssueTrackerRepository userRepo;
+
 
     @BeforeClass
     public static void init() {
-        ctx = new ServerContext("jdbc:postgresql://localhost:5432" +
-                "/issue_tracker?user=postgres&password=Qwerty123");
 
         user.setFirstName("Порфирий");
         user.setMiddleName("Петрович");
@@ -36,29 +47,20 @@ public class TestUserRepository {
         user.setUsername("champion");
         user.setPassword("quertyquerty".hashCode());
         user.setPhone("+7 910 123 4567");
-        user.setEmail("superporfity@mail.ru");
+        user.setEmail("superporfiry@mail.ru");
         user.setEmployeeCode("100001");
-    }
-
-    @AfterClass
-    public static void close() {
-        if (ctx != null) {
-            ctx.close();
-        }
     }
 
     @Test
     public void test_1_user_insert() {
 
-        BaseRepository userRep = ctx.getRepository("user");
-
         boolean testResult = false;
 
-        User inserted = (User)userRep.save(user);
+        User inserted = (User)userRepo.save(user);
 
         inserted.getId();
 
-        try (Statement stmt = ctx.getConnection().createStatement();
+        try (Statement stmt = connMngr.getConnection().createStatement();
              ResultSet rs = stmt.executeQuery("SELECT * FROM users " +
                      "WHERE id=" + inserted.getId())) {
             while (rs.next()) {
@@ -82,11 +84,9 @@ public class TestUserRepository {
     @Test
     public void test_user_findById() {
 
-        BaseRepository userRep = ctx.getRepository("user");
-
         int expectedId = -1;
 
-        try (Statement stmt = ctx.getConnection().createStatement();
+        try (Statement stmt = connMngr.getConnection().createStatement();
              ResultSet rs = stmt.executeQuery("SELECT id FROM users LIMIT 1")) {
             while (rs.next()) {
                 expectedId = rs.getInt("id");
@@ -95,7 +95,7 @@ public class TestUserRepository {
             throwables.printStackTrace();
         }
 
-        Optional<User> user = (Optional<User>)userRep.findById(expectedId);
+        Optional<User> user = (Optional<User>)userRepo.findById(expectedId);
 
         assertEquals(expectedId, user.isPresent() ? user.get().getId() : -1);
     }
@@ -103,11 +103,9 @@ public class TestUserRepository {
     @Test
     public void test_user_findAll() {
 
-        BaseRepository userRep = ctx.getRepository("user");
-
         int expected = -1;
 
-        try (Statement stmt = ctx.getConnection().createStatement();
+        try (Statement stmt = connMngr.getConnection().createStatement();
              ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM users")) {
             while (rs.next()) {
                 expected = rs.getInt(1);
@@ -116,7 +114,7 @@ public class TestUserRepository {
             throwables.printStackTrace();
         }
 
-        List<User> userList = (List<User>)userRep.findAll();
+        List<User> userList = (List<User>)userRepo.findAll();
 
         assertEquals(expected, userList.size());
     }
@@ -124,16 +122,14 @@ public class TestUserRepository {
     @Test
     public void test_2_user_update() {
 
-        BaseRepository userRep = ctx.getRepository("user");
-
         int expected = 0;
 
         User toUpdate = getTestUser();
 
         toUpdate.setPassword("StrongPWD10".hashCode());
-        User updated = (User)userRep.save(toUpdate);
+        User updated = (User)userRepo.save(toUpdate);
 
-        try (Statement stmt = ctx.getConnection().createStatement();
+        try (Statement stmt = connMngr.getConnection().createStatement();
              ResultSet rs = stmt.executeQuery("SELECT password FROM users " +
                      "WHERE id = " + updated.getId())) {
             while (rs.next()) {
@@ -149,16 +145,14 @@ public class TestUserRepository {
     @Test
     public void test_3_user_delete() {
 
-        BaseRepository userRep = ctx.getRepository("user");
-
         int expected = -1;
 
         User user = getTestUser();
         int deletedId = user.getId();
 
-        userRep.delete(getTestUser());
+        userRepo.delete(getTestUser());
 
-        try (Statement stmt = ctx.getConnection().createStatement();
+        try (Statement stmt = connMngr.getConnection().createStatement();
              ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM users " +
                      "WHERE id = " + deletedId)) {
             while (rs.next()) {
@@ -175,14 +169,16 @@ public class TestUserRepository {
         User user = new User();
 
         String queryString = "SELECT * FROM users WHERE " +
-                "first_name = '" + TestUserRepository.user.getFirstName() + "' AND middle_name = '" +
+                "first_name = '" + TestUserRepository.user.getFirstName() +
+                "' AND middle_name = '" +
                 TestUserRepository.user.getMiddleName() + "' AND last_name = '" +
-                TestUserRepository.user.getLastName() + "' AND username = '" + TestUserRepository.user.getUsername() +
+                TestUserRepository.user.getLastName() + "' AND username = '" +
+                TestUserRepository.user.getUsername() +
                 "' AND phone = '" + TestUserRepository.user.getPhone() + "' AND email = '" +
                 TestUserRepository.user.getEmail() + "' AND employee_code = '" +
                 TestUserRepository.user.getEmployeeCode() + "' LIMIT 1";
 
-        try (Statement stmt = ctx.getConnection().createStatement();
+        try (Statement stmt = connMngr.getConnection().createStatement();
              ResultSet rs = stmt.executeQuery(queryString)) {
             while (rs.next()) {
                 user.setId(rs.getInt("id"));

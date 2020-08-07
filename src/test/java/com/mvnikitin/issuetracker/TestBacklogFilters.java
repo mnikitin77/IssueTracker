@@ -1,18 +1,22 @@
 package com.mvnikitin.issuetracker;
 
 import com.mvnikitin.issuetracker.Project;
-import com.mvnikitin.issuetracker.configuration.ServerContext;
-import com.mvnikitin.issuetracker.dao.repositories.BaseRepository;
-import com.mvnikitin.issuetracker.factory.BasicIssueTrackingFactory;
-import com.mvnikitin.issuetracker.factory.PMSFactory;
-import com.mvnikitin.issuetracker.filter.IssueFilter;
+import com.mvnikitin.issuetracker.configuration.AppConfig;
+import com.mvnikitin.issuetracker.dao.repositories.IssueTrackerRepository;
+import com.mvnikitin.issuetracker.factory.IssueTrackingFactory;
+import com.mvnikitin.issuetracker.filter.Filters;
 import com.mvnikitin.issuetracker.issue.Issue;
 import com.mvnikitin.issuetracker.user.Team;
 import com.mvnikitin.issuetracker.user.User;
-import org.junit.AfterClass;
+import org.junit.After;
 import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringRunner;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -20,43 +24,68 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+
+@RunWith(SpringRunner.class)
+@ContextConfiguration(classes = AppConfig.class)
 public class TestBacklogFilters {
 
-    private static ServerContext ctx = new ServerContext("jdbc:postgresql://localhost:5432" +
-            "/issue_tracker?user=postgres&password=Qwerty123");
+    private static boolean isTestsInitialized;
+    private static boolean isTestsCleaned;
 
-    private static PMSFactory factory = BasicIssueTrackingFactory.getFactory();
+    @Autowired
+    private IssueTrackingFactory factory;
+
+    @Autowired
+    @Qualifier("proj_repo")
+    private IssueTrackerRepository projRepo;
+
+    @Autowired
+    @Qualifier("user_repo")
+    private IssueTrackerRepository userRepo;
+
+    @Autowired
+    @Qualifier("issue_repo")
+    private IssueTrackerRepository issueRepo;
+
+    @Autowired
+    private Filters filter;
+
+
     private static Project project;
-    private static IssueFilter filter = factory.createFilter();
-    private static BaseRepository projRepo = ctx.getRepository("project");
-    private static BaseRepository userRepo = ctx.getRepository("user");
 
     private static Issue issue1, issue2, issue3, issue4, issue5;
     private static User user1, user2;
 
-    @BeforeClass
-    public static void prepareTests() {
 
-        initProject();
-        createIssues();
+    @Before
+    public void prepareTests() {
+
+        if (!isTestsInitialized) {
+            initProject();
+            createIssues();
+
+            isTestsInitialized = true;
+        }
     }
 
-    @AfterClass
-    public static void clearTests() {
+    @After
+    public void clearTests() {
 
-        projRepo.delete(project);
+        if (!isTestsCleaned) {
+            // Delete project and issues
+            projRepo.delete(project);
 
-        for (User u: project.getTeam().getUsers()) {
-            userRepo.delete(u);
-        }
+            for (User u : project.getTeam().getUsers()) {
+                userRepo.delete(u);
+            }
 
-        if (ctx != null) {
-            ctx.close();
+            isTestsCleaned = true;
         }
     }
 
     @Test
     public void test_priorityFilter() {
+
         Stream<Issue> backlog = project.getBacklog().getAllIssues().stream();
 
         Stream<Issue> filteredIssues = filter.filter(
@@ -154,8 +183,10 @@ public class TestBacklogFilters {
                 filteredIssues.collect(Collectors.toList())));
     }
 
-    private static void initProject() {
-        project = factory.createProject(ctx);
+    private void initProject() {
+
+        project = factory.createProject();
+
         project.setName("MEGA Project");
         project.setDescription("It's an extra important project. " +
                 "Unfortunately it is top secret. No piece of information is to share.");
@@ -202,7 +233,7 @@ public class TestBacklogFilters {
         projRepo.save(project);
     }
 
-    private static void createIssues() {
+    private void createIssues() {
 
         issue1 = project.createIssue("Epic");
         issue1.setState("REVIEW");
@@ -214,6 +245,8 @@ public class TestBacklogFilters {
         issue1.setReporter(user1);
         issue1.setAssignee(user2);
 
+        issueRepo.save(issue1);
+
         issue2 = project.createIssue("Epic");
         issue2.setState("OPEN");
         issue2.setPriority("High");
@@ -222,6 +255,8 @@ public class TestBacklogFilters {
         issue2.setCode("ABC2");
         issue2.setStoryPoints(4);
         issue2.setReporter(user2);
+
+        issueRepo.save(issue2);
 
         issue3 = issue2.createChild();
         issue3.setState("IN PROGRESS");
@@ -232,6 +267,8 @@ public class TestBacklogFilters {
         issue3.setReporter(user2);
         issue3.setAssignee(user1);
 
+        issueRepo.save(issue3);
+
         issue4 = issue2.createChild();
         issue4.setState("OPEN");
         issue4.setTitle("Я как клиент хочу увидеть мессаджбокс.");
@@ -241,6 +278,8 @@ public class TestBacklogFilters {
         issue4.setReporter(user1);
         issue4.setAssignee(user2);
 
+        issueRepo.save(issue4);
+
         issue5 = project.createIssue("Bug");
         issue5.setState("OPEN");
         issue5.setPriority("High");
@@ -249,5 +288,7 @@ public class TestBacklogFilters {
         issue5.setCode("ABC26");
         issue5.setStoryPoints(4);
         issue5.setReporter(user2);
+
+        issueRepo.save(issue5);
     }
 }

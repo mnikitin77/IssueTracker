@@ -24,7 +24,7 @@ public class Epic extends Issue {
     @Override
     public Issue createChild() {
 
-        Issue child = project.getContext().getFactory().createIssue("Story", project);
+        Issue child = project.getFactory().createIssue("Story", project);
 
         // Добавляем дочерний элемент в бэклог
         // (альтернативный вариант: locatedIn.add(child);)

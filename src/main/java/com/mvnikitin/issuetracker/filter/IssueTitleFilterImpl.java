@@ -1,13 +1,15 @@
 package com.mvnikitin.issuetracker.filter;
 
 import com.mvnikitin.issuetracker.issue.Issue;
+import org.springframework.stereotype.Component;
 
 import java.util.stream.Stream;
 
-public class IssueAssigneeFilter extends IssueFilter {
+@Component("title_filter")
+public class IssueTitleFilterImpl extends AbstractIssueFilter {
 
-    public IssueAssigneeFilter(String filterCode) {
-        this.code = filterCode;
+    public IssueTitleFilterImpl() {
+        code = "title";
     }
 
     @Override
@@ -20,10 +22,9 @@ public class IssueAssigneeFilter extends IssueFilter {
         if (filterCode.equals(code)) {
 
             return issues.filter(i ->
-                    values == null ? i.getAssignee() == null :
-                            i.getAssignee() != null &&
-                            i.getAssignee().getUsername() != null &&
-                            i.getAssignee().getUsername().equals(values[0]));
+                    values == null ? i.getTitle() == null :
+                            i.getTitle() != null &&
+                            i.getTitle().contains((String)values[0]));
 
         } else if (nextFilter != null) {
             return nextFilter.filter(issues, borderMin, borderMax, filterCode, values);

@@ -1,20 +1,26 @@
 package com.mvnikitin.issuetracker.dao.repositories;
 
 import com.mvnikitin.issuetracker.Project;
-import com.mvnikitin.issuetracker.user.Team;
 import com.mvnikitin.issuetracker.backlog.IssueContainer;
 import com.mvnikitin.issuetracker.backlog.Sprint;
-import com.mvnikitin.issuetracker.configuration.ServerContext;
+import com.mvnikitin.issuetracker.configuration.DBConnection;
+import com.mvnikitin.issuetracker.factory.IssueTrackingFactory;
+import com.mvnikitin.issuetracker.user.Team;
 import com.mvnikitin.issuetracker.user.User;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.DependsOn;
+import org.springframework.stereotype.Component;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+@Component("proj_repo")
+@DependsOn("connection")
 public class ProjectRepository<T, ID> extends BaseRepository<T, ID> {
 
     private final static String GET_PROJECT_BY_ID =
@@ -59,10 +65,17 @@ public class ProjectRepository<T, ID> extends BaseRepository<T, ID> {
     private PreparedStatement addProjectUsers;
     private PreparedStatement getProjectTeamInfo;
 
-    public ProjectRepository(ServerContext ctx) {
-        super(ctx);
+    private DBConnection connMngr;
+    private IssueTrackingFactory factory;
 
+    private IssueTrackerRepository sprintsRepo;
+    private IssueTrackerRepository usersRepo;
+
+    @PostConstruct
+    private void init() {
         try {
+            con = connMngr.getConnection();
+
             findByIdStmt = con.prepareStatement(GET_PROJECT_BY_ID);
             findAllStmt = con.prepareStatement(GET_ALL_PROJECTS);
             insertStmt = con.prepareStatement(INSERT_PROJECT);
@@ -78,6 +91,48 @@ public class ProjectRepository<T, ID> extends BaseRepository<T, ID> {
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
+    }
+
+    @PreDestroy
+    @Override
+    public void close() {
+        super.close();
+
+        try {
+            if (getProjectUsers != null) {
+                getProjectUsers.close();
+            }
+            if (addProjectUsers != null) {
+                addProjectUsers.close();
+            }
+            if (getProjectTeamInfo != null) {
+                getProjectTeamInfo.close();
+            }
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        }
+    }
+
+    @Autowired
+    public void setConnMngr(DBConnection connMngr) {
+        this.connMngr = connMngr;
+    }
+
+    @Autowired
+    @Qualifier("sprint_repo")
+    public void setSprintsRepo(IssueTrackerRepository sprintsRepo) {
+        this.sprintsRepo = sprintsRepo;
+    }
+
+    @Autowired
+    @Qualifier("user_repo")
+    public void setUsersRepo(IssueTrackerRepository usersRepo) {
+        this.usersRepo = usersRepo;
+    }
+
+    @Autowired
+    public void setFactory(IssueTrackingFactory factory) {
+        this.factory = factory;
     }
 
     @Override
@@ -148,8 +203,6 @@ public class ProjectRepository<T, ID> extends BaseRepository<T, ID> {
                 insertTeam(project.getTeam());
 
                 // Сохраняем спринты
-                BaseRepository sprintsRepo = ctx.getRepository("sprint");
-
                 for (IssueContainer s: project.getSprints()) {
                     sprintsRepo.save(s);
                 }
@@ -234,27 +287,9 @@ public class ProjectRepository<T, ID> extends BaseRepository<T, ID> {
         }
     }
 
-    @Override
-    public void close() {
-        super.close();
-
-        try {
-            if (getProjectUsers != null) {
-                getProjectUsers.close();
-            }
-            if (addProjectUsers != null) {
-                addProjectUsers.close();
-            }
-            if (getProjectTeamInfo != null) {
-                getProjectTeamInfo.close();
-            }
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
-        }
-    }
-
     private Project makeProjectFromRS(ResultSet rs) throws SQLException {
-        Project project = new Project(ctx);
+//        Project project = new Project(ctx);
+        Project project = factory.createProject();
 
         project.setId(rs.getInt(1));
         project.setName(rs.getString(2));
@@ -275,10 +310,9 @@ public class ProjectRepository<T, ID> extends BaseRepository<T, ID> {
 
     private void loadSprints(Project project) {
 
-        SprintRepository sprintsRepo =
-                (SprintRepository)ctx.getRepository("sprint");
         List<Sprint> sprints =
-                (List<Sprint>)sprintsRepo.findAllByProjectId(project.getId());
+                (List<Sprint>)((SprintRepository)sprintsRepo)
+                        .findAllByProjectId(project.getId());
 
         for (Sprint s: sprints) {
             project.addSprint(s);
@@ -312,8 +346,7 @@ public class ProjectRepository<T, ID> extends BaseRepository<T, ID> {
     }
 
     private User getUser(int id) {
-        UserRepository userRep = (UserRepository)ctx.getRepository("user");
-        return  (User)(userRep.findById(id).orElse(null));
+        return  (User)(usersRepo.findById(id).orElse(null));
     }
 
     private void insertTeam(Team team) throws SQLException {

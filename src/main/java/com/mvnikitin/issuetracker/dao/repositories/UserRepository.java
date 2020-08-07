@@ -1,8 +1,13 @@
 package com.mvnikitin.issuetracker.dao.repositories;
 
-import com.mvnikitin.issuetracker.configuration.ServerContext;
+import com.mvnikitin.issuetracker.configuration.DBConnection;
 import com.mvnikitin.issuetracker.user.User;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.DependsOn;
+import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -10,6 +15,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+@Component("user_repo")
+@DependsOn("connection")
 public class UserRepository <T, ID> extends BaseRepository<T, ID> {
 
     private final static String GET_USER_BY_ID =
@@ -36,10 +43,13 @@ public class UserRepository <T, ID> extends BaseRepository<T, ID> {
     private final static String DELETE_USER =
             "DELETE FROM users WHERE id = ?";
 
-    public UserRepository(ServerContext ctx) {
-        super(ctx);
+    private DBConnection connMngr;
 
+    @PostConstruct
+    private void init() {
         try {
+            con = connMngr.getConnection();
+
             findByIdStmt = con.prepareStatement(GET_USER_BY_ID);
             findAllStmt = con.prepareStatement(GET_ALL_USERS);
             insertStmt = con.prepareStatement(INSERT_USER);
@@ -50,6 +60,17 @@ public class UserRepository <T, ID> extends BaseRepository<T, ID> {
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
+    }
+
+    @PreDestroy
+    @Override
+    public void close() {
+        super.close();
+    }
+
+    @Autowired
+    public void setConnMngr(DBConnection connMngr) {
+        this.connMngr = connMngr;
     }
 
     @Override

@@ -1,13 +1,15 @@
 package com.mvnikitin.issuetracker.filter;
 
 import com.mvnikitin.issuetracker.issue.Issue;
+import org.springframework.stereotype.Component;
 
 import java.util.stream.Stream;
 
-public class IssueReporterFilter extends IssueFilter {
+@Component("reporter_filter")
+public class IssueReporterFilterImpl extends AbstractIssueFilter {
 
-    public IssueReporterFilter(String filterCode) {
-        this.code = filterCode;
+    public IssueReporterFilterImpl() {
+        code = "reporter";
     }
 
     @Override

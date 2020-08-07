@@ -4,36 +4,19 @@ import com.mvnikitin.issuetracker.issue.Issue;
 
 import java.util.stream.Stream;
 
-public abstract class IssueFilter {
+public interface IssueFilter {
 
-    protected String code;
-    protected IssueFilter nextFilter;
-
-    public abstract Stream<Issue> filter(Stream<Issue> issues,
+    Stream<Issue> filter(Stream<Issue> issues,
                                          Object borderMin,
                                          Object borderMax,
                                          String filterCode,
                                          Object[] values);
 
-    public void addNextFilter(IssueFilter filter) {
-        nextFilter = filter;
-    }
+    void addNextFilter(IssueFilter filter);
 
-    public IssueFilter getNextFilter() {
-        return nextFilter;
-    }
+    IssueFilter getNextFilter();
 
-    public IssueFilter removeNextFilter() {
-        IssueFilter removedtFilter = nextFilter;
+    IssueFilter removeNextFilter();
 
-        if (nextFilter != null) {
-            nextFilter = nextFilter.getNextFilter();
-        }
-
-        return removedtFilter;
-    }
-
-    public String getCriterionCode() {
-        return code;
-    }
+    String getCriterionCode();
 }

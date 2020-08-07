@@ -1,14 +1,16 @@
 package com.mvnikitin.issuetracker.filter;
 
 import com.mvnikitin.issuetracker.issue.Issue;
+import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.stream.Stream;
 
-public class IssueCreatedFilter extends IssueFilter {
+@Component("created_filter")
+public class IssueCreatedFilterImpl extends AbstractIssueFilter {
 
-    public IssueCreatedFilter(String filterCode) {
-        this.code = filterCode;
+    public IssueCreatedFilterImpl() {
+        code = "created";
     }
 
     @Override

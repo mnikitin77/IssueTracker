@@ -1,5 +1,11 @@
 package com.mvnikitin.issuetracker.dao.repositories.dictionaries;
 
+import com.mvnikitin.issuetracker.configuration.DBConnection;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.DependsOn;
+import org.springframework.stereotype.Component;
+
+import javax.annotation.PostConstruct;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -8,12 +14,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Component("types")
+@DependsOn("connection")
 public class IssueTypes implements Dictionary {
 
     private Map<String, Integer> nameToId;
     private Map<Integer, String> idToName;
 
-    public IssueTypes(Connection connection) {
+    private DBConnection connMngr;
+
+    @PostConstruct
+    private void init() {
+        Connection connection = connMngr.getConnection();
+
         try (Statement stmt = connection.createStatement(
                 ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
              ResultSet rs = stmt.executeQuery("SELECT * FROM issue_types")) {
@@ -25,6 +38,11 @@ public class IssueTypes implements Dictionary {
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
+    }
+
+    @Autowired
+    public void setCnnMgr(DBConnection connMngr) {
+        this.connMngr = connMngr;
     }
 
     @Override

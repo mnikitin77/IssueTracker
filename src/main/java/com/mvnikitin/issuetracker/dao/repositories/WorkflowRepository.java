@@ -1,15 +1,20 @@
 package com.mvnikitin.issuetracker.dao.repositories;
 
-import com.mvnikitin.issuetracker.configuration.ServerContext;
+import com.mvnikitin.issuetracker.configuration.DBConnection;
 import com.mvnikitin.issuetracker.dao.repositories.dictionaries.Dictionary;
 import com.mvnikitin.issuetracker.issuelifecycle.Workflow;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.DependsOn;
+import org.springframework.stereotype.Component;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import java.sql.*;
 import java.util.*;
 
+@Component("wf_repo")
+@DependsOn("connection")
 public class WorkflowRepository<T, ID> extends BaseRepository<T, ID> {
 
     private final static String GET_WF_TRANSITIONS_BY_ID =
@@ -37,16 +42,17 @@ public class WorkflowRepository<T, ID> extends BaseRepository<T, ID> {
     private final static String DELETE_WF =
             "DELETE FROM workflows WHERE id = ?";
 
-    private Dictionary issueStates;
+
+    private DBConnection connMngr;
+
     private Dictionary issueTypes;
+    private Dictionary issueStates;
 
-    public WorkflowRepository(ServerContext ctx) {
-        super(ctx);
-
-        issueStates = ctx.getDictionary("issue_states");
-        issueTypes = ctx.getDictionary("issue_types");
-
+    @PostConstruct
+    private void init() {
         try {
+            con = connMngr.getConnection();
+
             findByIdStmt = con.prepareStatement(GET_WF_TRANSITIONS_BY_ID);
             findAllStmt = con.prepareStatement(GET_ALL_WF);
             insertStmt = con.prepareStatement(INSERT_WF);
@@ -56,6 +62,29 @@ public class WorkflowRepository<T, ID> extends BaseRepository<T, ID> {
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
+    }
+
+    @PreDestroy
+    @Override
+    public void close() {
+        super.close();
+    }
+
+    @Autowired
+    public void setConnMngr(DBConnection connMngr) {
+        this.connMngr = connMngr;
+    }
+
+    @Autowired
+    @Qualifier("types")
+    public void setIssueTypes(Dictionary issueTypes) {
+        this.issueTypes = issueTypes;
+    }
+
+    @Autowired
+    @Qualifier("states")
+    public void setIssueStates(Dictionary issueStates) {
+        this.issueStates = issueStates;
     }
 
     @Override

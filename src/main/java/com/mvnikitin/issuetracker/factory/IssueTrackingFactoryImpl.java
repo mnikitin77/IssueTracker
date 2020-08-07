@@ -1,15 +1,19 @@
 package com.mvnikitin.issuetracker.factory;
 
 import com.mvnikitin.issuetracker.Project;
-import com.mvnikitin.issuetracker.user.Team;
 import com.mvnikitin.issuetracker.backlog.Backlog;
 import com.mvnikitin.issuetracker.backlog.IssueContainer;
 import com.mvnikitin.issuetracker.backlog.Sprint;
-import com.mvnikitin.issuetracker.configuration.ServerContext;
+import com.mvnikitin.issuetracker.configuration.ServerData;
 import com.mvnikitin.issuetracker.exception.NotDefinedWorkflowException;
-import com.mvnikitin.issuetracker.filter.*;
 import com.mvnikitin.issuetracker.issue.*;
-import com.mvnikitin.issuetracker.issuelifecycle.*;
+import com.mvnikitin.issuetracker.issuelifecycle.Stateable;
+import com.mvnikitin.issuetracker.issuelifecycle.Workflow;
+import com.mvnikitin.issuetracker.issuelifecycle.WorkflowManager;
+import com.mvnikitin.issuetracker.user.Team;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Lookup;
+import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.util.HashMap;
@@ -17,7 +21,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.BiFunction;
 
-public class BasicIssueTrackingFactory extends PMSFactory {
+@Component("factory")
+public class IssueTrackingFactoryImpl implements IssueTrackingFactory {
 
     private final static Map<String, BiFunction<Stateable, Project, Issue>>
         issueFactories = new HashMap<>();
@@ -29,12 +34,11 @@ public class BasicIssueTrackingFactory extends PMSFactory {
         issueFactories.put("Story", (wf, p) -> new Story(wf, p));
     }
 
-    private final static PMSFactory instance = new BasicIssueTrackingFactory();
+    private ServerData serverData;
 
-    private BasicIssueTrackingFactory() { };
-
-    public static PMSFactory getFactory() {
-        return instance;
+    @Autowired
+    public void setServerData(ServerData serverData) {
+        this.serverData = serverData;
     }
 
     @Override
@@ -63,31 +67,11 @@ public class BasicIssueTrackingFactory extends PMSFactory {
         return new Sprint(from, to, capacity, project);
     }
 
-    @Override
-    public IssueFilter createFilter() {
-
-        IssueFilter filter = new IssueAssigneeFilter("assignee");
-        IssueFilter retval = filter;
-
-        filter.addNextFilter(new IssueCreatedFilter("created"));
-        filter = filter.getNextFilter();
-
-        filter.addNextFilter(new IssuePriorityFilter("priority"));
-        filter = filter.getNextFilter();
-
-        filter.addNextFilter(new IssueReporterFilter("reporter"));
-        filter = filter.getNextFilter();
-
-        filter.addNextFilter(new IssueTitleFilter("title"));
-
-        return retval;
-    }
-
     private Stateable getWorkflow(String type, Project project) {
+
         Stateable wf;
 
-        if (project == null ||
-                (wf = project.getContext().getWorkflow(type)) == null) {
+        if (project == null || (wf = serverData.getWorkflow(type)) == null) {
 
             throw new NotDefinedWorkflowException("No workflow defined for " +
                     "the issue type " + type);
@@ -96,9 +80,10 @@ public class BasicIssueTrackingFactory extends PMSFactory {
         return wf;
     }
 
+    @Lookup
     @Override
-    public Project createProject(ServerContext ctx) {
-        return new Project(ctx);
+    public Project createProject() {
+        return null;
     }
 
     @Override

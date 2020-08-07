@@ -1,13 +1,15 @@
 package com.mvnikitin.issuetracker.filter;
 
 import com.mvnikitin.issuetracker.issue.Issue;
+import org.springframework.stereotype.Component;
 
 import java.util.stream.Stream;
 
-public class IssuePriorityFilter extends IssueFilter {
+@Component("priority_filter")
+public class IssuePriorityFilterImpl extends AbstractIssueFilter {
 
-    public IssuePriorityFilter(String filterCode) {
-        this.code = filterCode;
+    public IssuePriorityFilterImpl() {
+        code = "priority";
     }
 
     @Override

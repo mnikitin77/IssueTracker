@@ -1,16 +1,21 @@
 package com.mvnikitin.issuetracker.dao.repositories;
 
 import com.mvnikitin.issuetracker.backlog.Sprint;
-import com.mvnikitin.issuetracker.configuration.ServerContext;
+import com.mvnikitin.issuetracker.configuration.DBConnection;
+import com.mvnikitin.issuetracker.configuration.ServerData;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.DependsOn;
+import org.springframework.stereotype.Component;
 
-import java.sql.Date;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+@Component("sprint_repo")
+@DependsOn("connection")
 public class SprintRepository <T, ID> extends BaseRepository<T, ID> {
 
     private final static String GET_SPRINT_BY_ID =
@@ -48,10 +53,14 @@ public class SprintRepository <T, ID> extends BaseRepository<T, ID> {
 
     private PreparedStatement findAllByProjectIdStmt;
 
-    public SprintRepository(ServerContext ctx) {
-        super(ctx);
+    private DBConnection connMngr;
+    private ServerData serverData;
 
+    @PostConstruct
+    private void init() {
         try {
+            con = connMngr.getConnection();
+
             findByIdStmt = con.prepareStatement(GET_SPRINT_BY_ID);
             findAllStmt = con.prepareStatement(GET_ALL_SPRINTS);
             insertStmt = con.prepareStatement(INSERT_SPRINT);
@@ -66,6 +75,30 @@ public class SprintRepository <T, ID> extends BaseRepository<T, ID> {
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
+    }
+
+    @PreDestroy
+    @Override
+    public void close() {
+        super.close();
+
+        try {
+            if (findAllByProjectIdStmt != null) {
+                findAllByProjectIdStmt.close();
+            }
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        }
+    }
+
+    @Autowired
+    public void setConnMngr(DBConnection connMngr) {
+        this.connMngr = connMngr;
+    }
+
+    @Autowired
+    public void setServerData(ServerData serverData) {
+        this.serverData = serverData;
     }
 
     @Override
@@ -188,19 +221,6 @@ public class SprintRepository <T, ID> extends BaseRepository<T, ID> {
         }
     }
 
-    @Override
-    public void close() {
-        super.close();
-
-        try {
-            if (findAllByProjectIdStmt != null) {
-                findAllByProjectIdStmt.close();
-            }
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
-        }
-    }
-
     private Sprint makeSprintFromRS(ResultSet rs) throws SQLException {
 
         Sprint sprint = new Sprint();
@@ -210,7 +230,7 @@ public class SprintRepository <T, ID> extends BaseRepository<T, ID> {
         sprint.setCapacity(rs.getInt(3));
         sprint.setFrom(rs.getDate(4).toLocalDate());
         sprint.setTo(rs.getDate(5).toLocalDate());
-        sprint.setProject(ctx.getProject(rs.getString(6)));
+        sprint.setProject(serverData.getProject(rs.getString(6)));
 
         return sprint;
     }

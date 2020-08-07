@@ -1,7 +1,5 @@
 package com.mvnikitin.issuetracker.dao.repositories;
 
-import com.mvnikitin.issuetracker.configuration.ServerContext;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -10,7 +8,6 @@ import java.sql.SQLException;
 public abstract class BaseRepository<T, ID> implements IssueTrackerRepository<T, ID> {
 
     protected Connection con;
-    protected ServerContext ctx;
 
     protected PreparedStatement findByIdStmt;
     protected PreparedStatement findAllStmt;
@@ -19,12 +16,6 @@ public abstract class BaseRepository<T, ID> implements IssueTrackerRepository<T,
     protected PreparedStatement countStmt;
     protected PreparedStatement existsStmt;
     protected PreparedStatement deleteStmt;
-
-    public BaseRepository(ServerContext ctx)
-    {
-        this.ctx = ctx;
-        con = ctx.getConnection();
-    }
 
     @Override
     public long count() {

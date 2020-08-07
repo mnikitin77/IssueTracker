@@ -27,8 +27,9 @@ public class TestDBBase extends DBTestCase {
                 prop.getProperty("db.password"));
     }
 
-    public TestDBBase(String name) {
-        super(name);
+//    public TestDBBase(String name) {
+//        super(name);
+    public TestDBBase() {
         prop = new Properties();
         try {
             prop.load(Thread.currentThread()
@@ -41,6 +42,8 @@ public class TestDBBase extends DBTestCase {
         System.setProperty(PropertiesBasedJdbcDatabaseTester.DBUNIT_USERNAME, prop.getProperty("db.username"));
         System.setProperty(PropertiesBasedJdbcDatabaseTester.DBUNIT_PASSWORD, prop.getProperty("db.password"));
     }
+
+
 
     @Override
     protected IDataSet getDataSet() throws Exception {
