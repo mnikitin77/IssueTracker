@@ -1,6 +1,9 @@
 package com.mvnikitin.issuetracker.backlog;
 
+import com.mvnikitin.issuetracker.Project;
 import com.mvnikitin.issuetracker.issue.Issue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.stream.Collectors;

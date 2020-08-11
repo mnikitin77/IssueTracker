@@ -1,6 +1,9 @@
 package com.mvnikitin.issuetracker.filter;
 
+import com.mvnikitin.issuetracker.dao.repositories.dictionaries.IssueTypes;
 import com.mvnikitin.issuetracker.issue.Issue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -10,6 +13,9 @@ import java.util.stream.Stream;
 
 @Component("issue_filters")
 public class Filters {
+
+    private static final Logger LOGGER =
+            LoggerFactory.getLogger(Filters.class);
 
     private IssueFilter filtersChain;
 
@@ -42,6 +48,8 @@ public class Filters {
         reporterFilter.addNextFilter(titleFilter);
 
         filtersChain = assigneeFilter;
+
+        LOGGER.debug("Issue filters are created");
     }
 
     public Stream<Issue> filter(Stream<Issue> issues,

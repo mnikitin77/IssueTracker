@@ -3,6 +3,8 @@ package com.mvnikitin.issuetracker.dao.repositories;
 import com.mvnikitin.issuetracker.configuration.DBConnection;
 import com.mvnikitin.issuetracker.dao.repositories.dictionaries.Dictionary;
 import com.mvnikitin.issuetracker.issuelifecycle.Workflow;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.DependsOn;
@@ -16,6 +18,9 @@ import java.util.*;
 @Component("wf_repo")
 @DependsOn("connection")
 public class WorkflowRepository<T, ID> extends BaseRepository<T, ID> {
+
+    private static final Logger LOGGER =
+            LoggerFactory.getLogger(WorkflowRepository.class);
 
     private final static String GET_WF_TRANSITIONS_BY_ID =
             "SELECT f.name, t.name FROM workflow_transitions wt " +
@@ -60,7 +65,7 @@ public class WorkflowRepository<T, ID> extends BaseRepository<T, ID> {
             existsStmt = con.prepareStatement(EXISTS_BY_ID);
             deleteStmt = con.prepareStatement(DELETE_WF);
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOGGER.error("Exception occurred: ", throwables);
         }
     }
 
@@ -113,7 +118,7 @@ public class WorkflowRepository<T, ID> extends BaseRepository<T, ID> {
                             }
 
                         } catch (SQLException throwables) {
-                            throwables.printStackTrace();
+                            LOGGER.error("Exception occurred: ", throwables);
                         }
                     }
                 } else {
@@ -148,7 +153,7 @@ public class WorkflowRepository<T, ID> extends BaseRepository<T, ID> {
                     }
                 }
             } catch (SQLException throwables) {
-                throwables.printStackTrace();
+                LOGGER.error("Exception occurred: ", throwables);
             }
         }
 
@@ -172,7 +177,7 @@ public class WorkflowRepository<T, ID> extends BaseRepository<T, ID> {
             }
 
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOGGER.error("Exception occurred: ", throwables);
         }
 
         return (Optional<T>) Optional.ofNullable(wf);
@@ -191,7 +196,7 @@ public class WorkflowRepository<T, ID> extends BaseRepository<T, ID> {
                 list.add((Workflow) findById((ID)((Integer)rs.getInt(1))).get());
             }
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOGGER.error("Exception occurred: ", throwables);
         }
 
         return (Iterable<T>) list;
@@ -208,7 +213,7 @@ public class WorkflowRepository<T, ID> extends BaseRepository<T, ID> {
             deleteStmt.setInt(1, ((Workflow)entity).getId());
             deleteStmt.executeUpdate();
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOGGER.error("Exception occurred: ", throwables);
         }
     }
 
@@ -238,8 +243,6 @@ public class WorkflowRepository<T, ID> extends BaseRepository<T, ID> {
                         transitionsRS.getString(2));
             }
 
-        } catch (SQLException throwables) {
-            throw throwables;
         }
 
         return wf;

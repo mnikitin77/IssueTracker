@@ -7,6 +7,8 @@ import com.mvnikitin.issuetracker.configuration.DBConnection;
 import com.mvnikitin.issuetracker.factory.IssueTrackingFactory;
 import com.mvnikitin.issuetracker.user.Team;
 import com.mvnikitin.issuetracker.user.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.DependsOn;
@@ -22,6 +24,9 @@ import java.util.Optional;
 @Component("proj_repo")
 @DependsOn("connection")
 public class ProjectRepository<T, ID> extends BaseRepository<T, ID> {
+
+    private static final Logger LOGGER =
+            LoggerFactory.getLogger(ProjectRepository.class);
 
     private final static String GET_PROJECT_BY_ID =
             "SELECT * FROM projects WHERE id = ?";
@@ -89,7 +94,7 @@ public class ProjectRepository<T, ID> extends BaseRepository<T, ID> {
             getProjectTeamInfo = con.prepareStatement(GET_TEAM_INFO);
 
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOGGER.error("Exception occurred: ", throwables);
         }
     }
 
@@ -109,7 +114,7 @@ public class ProjectRepository<T, ID> extends BaseRepository<T, ID> {
                 getProjectTeamInfo.close();
             }
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOGGER.error("Exception occurred: ", throwables);
         }
     }
 
@@ -174,7 +179,7 @@ public class ProjectRepository<T, ID> extends BaseRepository<T, ID> {
                                     project.getTeam().setId(rsTeamId.getInt(1));
                                 }
                             } catch (SQLException throwables) {
-                                throwables.printStackTrace();
+                                LOGGER.error("Exception occurred: ", throwables);
                             }
                         }
                     }
@@ -210,17 +215,17 @@ public class ProjectRepository<T, ID> extends BaseRepository<T, ID> {
                 con.commit();
 
             } catch (SQLException throwables) {
-                throwables.printStackTrace();
+                LOGGER.error("Exception occurred: ", throwables);
                 try {
                     con.rollback();
                 } catch (SQLException e) {
-                    e.printStackTrace();
+                    LOGGER.error("Exception occurred: ", e);
                 }
             } finally {
                 try {
                     con.setAutoCommit(true);
-                } catch (SQLException throwables) {
-                    throwables.printStackTrace();
+                } catch (SQLException ex) {
+                    LOGGER.error("Exception occurred: ", ex);
                 }
             }
         }
@@ -247,7 +252,7 @@ public class ProjectRepository<T, ID> extends BaseRepository<T, ID> {
             }
 
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOGGER.error("Exception occurred: ", throwables);
         }
 
         return (Optional<T>) Optional.ofNullable(project);
@@ -266,7 +271,7 @@ public class ProjectRepository<T, ID> extends BaseRepository<T, ID> {
                 list.add(makeProjectFromRS(rs));
             }
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOGGER.error("Exception occurred: ", throwables);
         }
 
         return (Iterable<T>) list;
@@ -283,7 +288,7 @@ public class ProjectRepository<T, ID> extends BaseRepository<T, ID> {
             deleteStmt.setInt(1, ((Project)entity).getId());
             deleteStmt.executeUpdate();
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOGGER.error("Exception occurred: ", throwables);
         }
     }
 
@@ -339,7 +344,7 @@ public class ProjectRepository<T, ID> extends BaseRepository<T, ID> {
             }
 
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOGGER.error("Exception occurred: ", throwables);
         }
 
         project.setTeam(team);

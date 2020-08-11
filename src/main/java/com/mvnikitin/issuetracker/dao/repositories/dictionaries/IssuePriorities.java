@@ -1,6 +1,9 @@
 package com.mvnikitin.issuetracker.dao.repositories.dictionaries;
 
 import com.mvnikitin.issuetracker.configuration.DBConnection;
+import com.mvnikitin.issuetracker.configuration.ServerData;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Component;
@@ -17,6 +20,9 @@ import java.util.stream.Collectors;
 @Component("priorities")
 @DependsOn("connection")
 public class IssuePriorities  implements Dictionary {
+
+    private static final Logger LOGGER =
+            LoggerFactory.getLogger(IssuePriorities.class);
 
     private Map<String, Integer> nameToId;
     private Map<Integer, String> idToName;
@@ -35,8 +41,10 @@ public class IssuePriorities  implements Dictionary {
             rs.beforeFirst();
             idToName = DictionaryUtils.rsToMapValueName(rs);
 
+            LOGGER.debug("Issue Priorities dictionary is loaded");
+
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOGGER.error("Exception occurred: ", throwables);
         }
     }
 

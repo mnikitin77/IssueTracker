@@ -3,6 +3,8 @@ package com.mvnikitin.issuetracker.dao.repositories;
 import com.mvnikitin.issuetracker.backlog.Sprint;
 import com.mvnikitin.issuetracker.configuration.DBConnection;
 import com.mvnikitin.issuetracker.configuration.ServerData;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Component;
@@ -17,6 +19,9 @@ import java.util.Optional;
 @Component("sprint_repo")
 @DependsOn("connection")
 public class SprintRepository <T, ID> extends BaseRepository<T, ID> {
+
+    private static final Logger LOGGER =
+            LoggerFactory.getLogger(SprintRepository.class);
 
     private final static String GET_SPRINT_BY_ID =
             "SELECT s.id, s.name, s.capacity, s.start_date, s.end_date, " +
@@ -73,7 +78,7 @@ public class SprintRepository <T, ID> extends BaseRepository<T, ID> {
                     con.prepareStatement(GET_ALL_SPRINTS_BY_PROJECT_ID);
 
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOGGER.error("Exception occurred: ", throwables);
         }
     }
 
@@ -87,7 +92,7 @@ public class SprintRepository <T, ID> extends BaseRepository<T, ID> {
                 findAllByProjectIdStmt.close();
             }
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOGGER.error("Exception occurred: ", throwables);
         }
     }
 
@@ -124,7 +129,7 @@ public class SprintRepository <T, ID> extends BaseRepository<T, ID> {
                             }
 
                         } catch (SQLException throwables) {
-                            throwables.printStackTrace();
+                            LOGGER.error("Exception occurred: ", throwables);
                         }
                     }
                 } else {
@@ -135,7 +140,7 @@ public class SprintRepository <T, ID> extends BaseRepository<T, ID> {
                     updateStmt.executeUpdate();
                 }
             } catch (SQLException throwables) {
-                throwables.printStackTrace();
+                LOGGER.error("Exception occurred: ", throwables);
             }
         }
 
@@ -159,7 +164,7 @@ public class SprintRepository <T, ID> extends BaseRepository<T, ID> {
             }
 
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOGGER.error("Exception occurred: ", throwables);
         }
 
         return (Optional<T>) Optional.ofNullable(sprint);
@@ -178,7 +183,7 @@ public class SprintRepository <T, ID> extends BaseRepository<T, ID> {
                 list.add(makeSprintFromRS(rs));
             }
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOGGER.error("Exception occurred: ", throwables);
         }
 
         return (Iterable<T>) list;
@@ -200,7 +205,7 @@ public class SprintRepository <T, ID> extends BaseRepository<T, ID> {
                 }
             }
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOGGER.error("Exception occurred: ", throwables);
         }
 
         return (Iterable<T>) list;
@@ -217,7 +222,7 @@ public class SprintRepository <T, ID> extends BaseRepository<T, ID> {
             deleteStmt.setInt(1, ((Sprint)entity).getId());
             deleteStmt.executeUpdate();
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOGGER.error("Exception occurred: ", throwables);
         }
     }
 

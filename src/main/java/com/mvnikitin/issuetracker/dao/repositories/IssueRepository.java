@@ -7,7 +7,10 @@ import com.mvnikitin.issuetracker.configuration.DBConnection;
 import com.mvnikitin.issuetracker.configuration.ServerData;
 import com.mvnikitin.issuetracker.dao.repositories.dictionaries.Dictionary;
 import com.mvnikitin.issuetracker.factory.IssueTrackingFactory;
+import com.mvnikitin.issuetracker.filter.Filters;
 import com.mvnikitin.issuetracker.issue.Issue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.DependsOn;
@@ -24,6 +27,9 @@ import java.util.Optional;
 @Component("issue_repo")
 @DependsOn("connection")
 public class IssueRepository<T, ID> extends BaseRepository<T, ID> {
+
+    private static final Logger LOGGER =
+            LoggerFactory.getLogger(IssueRepository.class);
 
     private final static String GET_ISSUE_BY_ID =
             "SELECT i.id, i.issue_type_id, prj.name, i.issue_state_id, " +
@@ -96,7 +102,7 @@ public class IssueRepository<T, ID> extends BaseRepository<T, ID> {
             findAllByProjectStmt = con.prepareStatement(GET_PROJECT_ISSUES);
 
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOGGER.error("Exception occurred: ", throwables);
         }
     }
 
@@ -110,7 +116,7 @@ public class IssueRepository<T, ID> extends BaseRepository<T, ID> {
                 findAllByProjectStmt.close();
             }
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOGGER.error("Exception occurred: ", throwables);
         }
     }
 
@@ -181,7 +187,7 @@ public class IssueRepository<T, ID> extends BaseRepository<T, ID> {
                     updateStmt.executeUpdate();
                 }
             } catch (SQLException throwables) {
-                throwables.printStackTrace();
+                LOGGER.error("Exception occurred: ", throwables);
             }
         }
 
@@ -210,7 +216,7 @@ public class IssueRepository<T, ID> extends BaseRepository<T, ID> {
             }
 
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOGGER.error("Exception occurred: ", throwables);
         }
 
         return (Optional<T>) Optional.ofNullable(issue);
@@ -233,7 +239,7 @@ public class IssueRepository<T, ID> extends BaseRepository<T, ID> {
             deleteStmt.setInt(1, ((Issue)entity).getId());
             deleteStmt.executeUpdate();
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOGGER.error("Exception occurred: ", throwables);
         }
     }
 
@@ -253,7 +259,7 @@ public class IssueRepository<T, ID> extends BaseRepository<T, ID> {
                 }
             }
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOGGER.error("Exception occurred: ", throwables);
         }
 
         return (Iterable<T>) list;

@@ -8,6 +8,8 @@ import com.mvnikitin.issuetracker.factory.IssueTrackingFactory;
 import com.mvnikitin.issuetracker.issue.Issue;
 import com.mvnikitin.issuetracker.user.Team;
 import com.mvnikitin.issuetracker.user.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Scope;
@@ -23,6 +25,8 @@ import java.util.stream.Collectors;
 @Component("project")
 @Scope("prototype")
 public class Project {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(Project.class);
 
     private int id;
     private Team team;
@@ -79,6 +83,8 @@ public class Project {
         for (Issue i: issues) {
             placeAndlinkIssue(i);
         }
+
+        LOGGER.debug("Project [" + this.name + "] is reloaded issues");
     }
 
     public void placeAndlinkIssue(Issue i) {
@@ -123,6 +129,9 @@ public class Project {
         issueBag.put(issue.getId(), issue);
         backlog.add(issue);
 
+        LOGGER.debug("Project [" + this.name + "] created issue [id: " +
+                issue.getId() + ", title: " + issue.getTitle() + "]");
+
         return issue;
     }
 
@@ -152,6 +161,9 @@ public class Project {
         issueBag.remove(issue.getId());
 
         issuesRepo.delete(issue);
+
+        LOGGER.debug("Project [" + this.name + "] deleted issue [id: " +
+            issue.getId() + ", title: " + issue.getTitle() + "]");
     }
 
     public void saveIssue(Issue issue) {
@@ -164,6 +176,10 @@ public class Project {
 
         IssueContainer sprint = factory.createSprint(from, to, capacity, this);
         addSprint(sprint);
+
+        LOGGER.debug("Project [" + this.name + "] created sprint [" +
+                sprint.getName() + "]");
+
         return sprint;
     }
 
@@ -188,6 +204,9 @@ public class Project {
         if (sprint != null) {
             sprintsRepo.delete(sprint);
         }
+
+        LOGGER.debug("Project [" + this.name + "] deleted sprint [" +
+                sprint.getName() + "]");
     }
 
     public void saveSprint(String name) {

@@ -4,6 +4,8 @@ import com.mvnikitin.issuetracker.Project;
 import com.mvnikitin.issuetracker.dao.repositories.IssueTrackerRepository;
 import com.mvnikitin.issuetracker.issuelifecycle.Stateable;
 import com.mvnikitin.issuetracker.issuelifecycle.Workflow;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -15,6 +17,8 @@ import java.util.Map;
 
 @Component
 public class ServerData {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ServerData.class);
 
     private Map<String, Stateable> workflows = new HashMap<>();
     private Map<String, Project> projects = new HashMap<>();
@@ -52,6 +56,8 @@ public class ServerData {
         for (Workflow w: wfsList) {
             workflows.put(w.getType(), w);
         }
+
+        LOGGER.debug("Workflows are loaded");
     }
 
     public Project getProject(String name) {
@@ -65,5 +71,7 @@ public class ServerData {
         for (Project p: prjList) {
             projects.put(p.getName(), p);
         }
+
+        LOGGER.debug("Projects are loaded");
     }
 }

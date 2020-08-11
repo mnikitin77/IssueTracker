@@ -2,6 +2,8 @@ package com.mvnikitin.issuetracker.dao.repositories;
 
 import com.mvnikitin.issuetracker.configuration.DBConnection;
 import com.mvnikitin.issuetracker.user.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Component;
@@ -18,6 +20,9 @@ import java.util.Optional;
 @Component("user_repo")
 @DependsOn("connection")
 public class UserRepository <T, ID> extends BaseRepository<T, ID> {
+
+    private static final Logger LOGGER =
+            LoggerFactory.getLogger(UserRepository.class);
 
     private final static String GET_USER_BY_ID =
             "SELECT * FROM users WHERE id = ?";
@@ -58,7 +63,7 @@ public class UserRepository <T, ID> extends BaseRepository<T, ID> {
             existsStmt = con.prepareStatement(EXISTS_BY_ID);
             deleteStmt = con.prepareStatement(DELETE_USER);
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOGGER.error("Exception occurred: ", throwables);
         }
     }
 
@@ -96,7 +101,7 @@ public class UserRepository <T, ID> extends BaseRepository<T, ID> {
                             }
 
                         } catch (SQLException throwables) {
-                            throwables.printStackTrace();
+                            LOGGER.error("Exception occurred: ", throwables);
                         }
                     }
                 } else {
@@ -108,7 +113,7 @@ public class UserRepository <T, ID> extends BaseRepository<T, ID> {
                     updateStmt.executeUpdate();
                 }
             } catch (SQLException throwables) {
-                throwables.printStackTrace();
+                LOGGER.error("Exception occurred: ", throwables);
             }
         }
 
@@ -134,7 +139,7 @@ public class UserRepository <T, ID> extends BaseRepository<T, ID> {
             }
 
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOGGER.error("Exception occurred: ", throwables);
         }
 
         return (Optional<T>) Optional.ofNullable(user);
@@ -153,7 +158,7 @@ public class UserRepository <T, ID> extends BaseRepository<T, ID> {
                 list.add(makeUserFromRS(rs));
             }
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOGGER.error("Exception occurred: ", throwables);
         }
 
         return (Iterable<T>) list;
@@ -170,7 +175,7 @@ public class UserRepository <T, ID> extends BaseRepository<T, ID> {
             deleteStmt.setInt(1, ((User)entity).getId());
             deleteStmt.executeUpdate();
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOGGER.error("Exception occurred: ", throwables);
         }
     }
 
