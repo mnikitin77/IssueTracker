@@ -5,8 +5,8 @@ import com.mvnikitin.itracker.rest.assemblers.ProjectResourceAssemblerShort;
 import com.mvnikitin.itracker.rest.entities.ProjectEntityShort;
 import com.mvnikitin.itracker.rest.entities.ProjectEntity;
 import com.mvnikitin.itracker.rest.exceptions.ResourceNotFoundException;
-import com.mvnikitin.itracker.rest.repositories.ProjRepositoryShort;
-import com.mvnikitin.itracker.rest.repositories.ProjRepositoryFull;
+import com.mvnikitin.itracker.rest.repositories.ProjectRepoShort;
+import com.mvnikitin.itracker.rest.repositories.ProjectRepo;
 import com.mvnikitin.itracker.rest.resources.ProjectModelShort;
 import com.mvnikitin.itracker.rest.resources.ProjectModel;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,18 +23,18 @@ import java.util.List;
 @RequestMapping("api/v1/projects")
 public class ProjectRESTController {
 
-    private ProjRepositoryFull repositoryFull;
-    private ProjRepositoryShort repository;
+    private ProjectRepo repositoryFull;
+    private ProjectRepoShort repository;
     private ProjectResourceAssembler assemblerFull;
     private ProjectResourceAssemblerShort assembler;
 
     @Autowired
-    public void setRepositoryFull(ProjRepositoryFull repositoryFull) {
+    public void setRepositoryFull(ProjectRepo repositoryFull) {
         this.repositoryFull = repositoryFull;
     }
 
     @Autowired
-    public void setRepository(ProjRepositoryShort repository) {
+    public void setRepository(ProjectRepoShort repository) {
         this.repository = repository;
     }
 

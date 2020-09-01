@@ -15,7 +15,7 @@ public class ProjectResourceAssembler extends
         RepresentationModelAssemblerSupport<ProjectEntity, ProjectModel> {
 
     public ProjectResourceAssembler() {
-        super(ProjectRESTController.class,   ProjectModel.class);
+        super(ProjectRESTController.class, ProjectModel.class);
     }
 
     @Override
