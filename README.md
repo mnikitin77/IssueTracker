@@ -14,7 +14,7 @@ Other things:
 
 ## Part 2 - REST
 
-The RESTful API allows working with the resources Project and Issue offering main CRUD operations. It is implemented with help of Spring Boot, Spring Data JPA, Basic Security with the in-memory authentication (system_user:Qwerty123) and HATEOAS for linking resources. REST uses its own JPA entities and repositories to access the data via Hibernate and do not uses the classes of Part 1.  
+The RESTful API allows working with the resources Project and Issue offering main CRUD operations. It is located in the packages com.mvnikitin.itracker.rest.*. It is implemented with help of Spring Boot, Spring Data JPA, Basic Security with the in-memory authentication (system_user:Qwerty123) and HATEOAS for linking resources. REST uses its own JPA entities and repositories to access the data via Hibernate and do not uses the classes of Part 1.  
 ****
 
 IMPORTANT: Before run, please create 'issue_tracker' DB schema, check the DB connection URL over the code (flyway.conf and application.properties), and then run flyway:migrate or run the script V1_1__issue_tracker_initialize.sql manually.
